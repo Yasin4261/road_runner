@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+
+  mongo:
+    image: mongo:latest
+    container_name: roadrunner-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - roadrunner_network
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.runCommand({ connectionStatus: 1 })"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+
+
+  node:
+    build:
+      context: .
+    container_name: roadrunner-node
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+    volumes:
+      - .:/app
+    networks:
+      - roadrunner_network
+
+volumes:
+  mongo_data:
+
+networks:
+  roadrunner_network:
+    driver: bridge
