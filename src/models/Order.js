@@ -2,22 +2,22 @@ const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
     customer: {
-        name: String,
-        phone: String,
-        address: String
+        name: { type: String, required: true },
+        phone: { type: String, required: true },
+        address: { type: String, required: true }
     },
     pickup: {
-        address: String,
+        address: { type: String, required: true },
         location: {
-            type: { type: String, default: 'Point' },
-            coordinates: [Number]
+            type: { type: String, enum: ['Point'], default: 'Point' },
+            coordinates: { type: [Number], required: true }
         }
     },
     delivery: {
-        address: String,
+        address: { type: String, required: true },
         location: {
-            type: { type: String, default: 'Point' },
-            coordinates: [Number]
+            type: { type: String, enum: ['Point'], default: 'Point' },
+            coordinates: { type: [Number], required: true }
         }
     },
     status: {
@@ -29,15 +29,22 @@ const orderSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Runner'
     },
-    price: Number,
-    distance: Number,
-    createdAt: { type: Date, default: Date.now },
-    assignedAt: Date,
+    price: {
+        type: Number,
+        required: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
     pickedUpAt: Date,
     deliveredAt: Date
+}, {
+    timestamps: true
 });
 
-orderSchema.index({ "pickup.location": "2dsphere" });
-orderSchema.index({ "delivery.location": "2dsphere" });
+// Lokasyon indexleri
+orderSchema.index({ 'pickup.location': '2dsphere' });
+orderSchema.index({ 'delivery.location': '2dsphere' });
 
 module.exports = mongoose.model('Order', orderSchema);

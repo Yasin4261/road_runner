@@ -42,12 +42,29 @@ router.post('/', orderController.createOrder);
  * @swagger
  * components:
  *   schemas:
+ *     Location:
+ *       type: object
+ *       required:
+ *         - type
+ *         - coordinates
+ *       properties:
+ *         type:
+ *           type: string
+ *           enum: [Point]
+ *         coordinates:
+ *           type: array
+ *           items:
+ *             type: number
+ *           minItems: 2
+ *           maxItems: 2
+ *           description: [longitude, latitude]
  *     Order:
  *       type: object
  *       required:
  *         - customer
  *         - pickup
  *         - delivery
+ *         - price
  *       properties:
  *         customer:
  *           type: object
@@ -64,17 +81,14 @@ router.post('/', orderController.createOrder);
  *             address:
  *               type: string
  *             location:
- *               type: object
+ *               $ref: '#/components/schemas/Location'
  *         delivery:
  *           type: object
  *           properties:
  *             address:
  *               type: string
  *             location:
- *               type: object
- *         status:
- *           type: string
- *           enum: [pending, assigned, pickedUp, delivered, cancelled]
+ *               $ref: '#/components/schemas/Location'
  *         price:
  *           type: number
  */

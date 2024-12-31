@@ -15,7 +15,13 @@ class RunnerController {
     // Yeni kurye oluştur
     async createRunner(req, res) {
         try {
-            const runner = new Runner(req.body);
+            const runner = new Runner({
+                ...req.body,
+                currentStatus: 'offline',  // Başlangıçta offline
+                queuePosition: null,       // Kuyrukta değil
+                shiftStartTime: null       // Vardiyada değil
+            });
+
             await runner.save();
             res.status(201).json(runner);
         } catch (error) {
@@ -31,22 +37,29 @@ class RunnerController {
                 return res.status(404).json({ message: 'Kurye bulunamadı' });
             }
 
-            // Zaten vardiyada mı kontrol et
-            if (runner.currentStatus !== 'offline') {
+            // Kurye zaten vardiyada mı kontrol et
+            if (runner.currentStatus !== 'offline' || runner.shiftStartTime) {
                 return res.status(400).json({ 
                     message: 'Kurye zaten vardiyada'
                 });
             }
 
-            // Vardiyaya başlat
+            // Önce kurye durumunu güncelle
             runner.currentStatus = 'available';
             runner.shiftStartTime = new Date();
             await runner.save();
 
-            // Kuyruğa ekle
-            await queueService.addRunnerToQueue(runner._id);
-
-            res.json(runner);
+            // Sonra kuyruğa ekle
+            try {
+                await queueService.addRunnerToQueue(runner._id);
+                res.json(runner);
+            } catch (error) {
+                // Eğer kuyruğa ekleme başarısız olursa, kurye durumunu geri al
+                runner.currentStatus = 'offline';
+                runner.shiftStartTime = null;
+                await runner.save();
+                throw error;
+            }
         } catch (error) {
             res.status(400).json({ message: error.message });
         }
@@ -60,27 +73,27 @@ class RunnerController {
                 return res.status(404).json({ message: 'Kurye bulunamadı' });
             }
 
-            // Vardiyada mı kontrol et
-            if (runner.currentStatus === 'offline') {
+            // Kurye vardiyada değilse hata ver
+            if (runner.currentStatus === 'offline' || !runner.shiftStartTime) {
                 return res.status(400).json({ 
-                    message: 'Kurye zaten vardiyada değil'
+                    message: 'Kurye vardiyada değil'
                 });
             }
 
-            // Aktif siparişi var mı kontrol et
+            // Aktif siparişi varsa çıkamasın
             if (runner.currentStatus === 'busy') {
                 return res.status(400).json({ 
                     message: 'Aktif siparişi olan kurye vardiyadan çıkamaz'
                 });
             }
 
-            // Vardiyadan çıkar
+            // Kuyruktan çıkar
+            await queueService.removeRunnerFromQueue(runner._id);
+
+            // Kurye durumunu güncelle
             runner.currentStatus = 'offline';
             runner.shiftStartTime = null;
             await runner.save();
-
-            // Kuyruktan çıkar
-            await queueService.removeRunnerFromQueue(runner._id);
 
             res.json(runner);
         } catch (error) {
