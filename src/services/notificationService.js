@@ -54,6 +54,22 @@ class NotificationService {
             return false;
         }
     }
+
+    async notifyOrderStatusUpdate(order) {
+        try {
+            console.log('Sipariş durumu güncelleme bildirimi:', {
+                orderId: order._id,
+                runnerId: order.runner,
+                status: order.status,
+                statusHistory: order.statusHistory[order.statusHistory.length - 1],
+                updatedAt: new Date()
+            });
+            return true;
+        } catch (error) {
+            console.error('Bildirim gönderme hatası:', error);
+            return false;
+        }
+    }
 }
 
 module.exports = new NotificationService();

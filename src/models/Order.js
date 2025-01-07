@@ -22,9 +22,20 @@ const orderSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'assigned', 'pickedUp', 'delivered', 'cancelled'],
+        enum: ['pending', 'preparing', 'ready', 'assigned', 'pickedUp', 'onWay', 'delivered', 'cancelled'],
         default: 'pending'
     },
+    statusHistory: [{
+        status: {
+            type: String,
+            enum: ['pending', 'preparing', 'ready', 'assigned', 'pickedUp', 'onWay', 'delivered', 'cancelled']
+        },
+        timestamp: {
+            type: Date,
+            default: Date.now
+        },
+        note: String
+    }],
     runner: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Runner'

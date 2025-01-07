@@ -40,6 +40,38 @@ router.post('/', orderController.createOrder);
 
 /**
  * @swagger
+ * /api/orders/{id}/status:
+ *   put:
+ *     summary: Sipariş durumunu güncelle
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [preparing, ready, pickedUp, onWay, delivered, cancelled]
+ *               note:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Sipariş durumu güncellendi
+ */
+router.put('/:id/status', orderController.updateOrderStatus);
+
+/**
+ * @swagger
  * components:
  *   schemas:
  *     Location:

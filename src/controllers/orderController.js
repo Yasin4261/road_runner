@@ -85,22 +85,44 @@ class OrderController {
     // Sipariş durumunu güncelle
     async updateOrderStatus(req, res) {
         try {
-            const order = await Order.findById(req.params.id);
+            const { id } = req.params;
+            const { status, note } = req.body;
+
+            const order = await Order.findById(id);
             if (!order) {
                 return res.status(404).json({ message: 'Sipariş bulunamadı' });
             }
 
-            const { status } = req.body;
-            order.status = status;
-
-            // Duruma göre işlemler
+            // Duruma göre kontroller
             switch (status) {
+                case 'preparing':
+                    if (order.status !== 'pending') {
+                        return res.status(400).json({ message: 'Sipariş durumu güncellenemez' });
+                    }
+                    break;
+                case 'ready':
+                    if (order.status !== 'preparing') {
+                        return res.status(400).json({ message: 'Sipariş henüz hazırlanmadı' });
+                    }
+                    break;
                 case 'pickedUp':
+                    if (order.status !== 'ready' && order.status !== 'assigned') {
+                        return res.status(400).json({ message: 'Sipariş hazır değil' });
+                    }
                     order.pickedUpAt = new Date();
-                    await notificationService.notifyOrderPickedUp(order);
+                    break;
+                case 'onWay':
+                    if (order.status !== 'pickedUp') {
+                        return res.status(400).json({ message: 'Sipariş henüz alınmadı' });
+                    }
                     break;
                 case 'delivered':
+                    if (order.status !== 'onWay') {
+                        return res.status(400).json({ message: 'Sipariş yolda değil' });
+                    }
                     order.deliveredAt = new Date();
+                    
+                    // Kuryeyi müsait duruma getir
                     if (order.runner) {
                         const runner = await Runner.findById(order.runner);
                         if (runner) {
@@ -109,11 +131,23 @@ class OrderController {
                             await runner.save();
                         }
                     }
-                    await notificationService.notifyOrderDelivered(order);
                     break;
             }
 
+            // Durum geçmişini güncelle
+            order.statusHistory.push({
+                status,
+                timestamp: new Date(),
+                note
+            });
+
+            // Siparişin durumunu güncelle
+            order.status = status;
             await order.save();
+
+            // Bildirim gönder
+            await notificationService.notifyOrderStatusUpdate(order);
+
             res.json(order);
         } catch (error) {
             res.status(400).json({ message: error.message });
