@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const mongoose = require('mongoose');
@@ -9,9 +10,11 @@ const orderRoutes = require('./routes/order');
 const authRoutes = require('./routes/authRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const swaggerSetup = require('./config/swagger');
+const queueService = require('./services/queueService');
 
 const app = express();
 const server = http.createServer(app);
+const io = require('socket.io')(server); // Socket.IO'yu başlatın
 
 // Body parser middleware'lerini en başa al
 app.use(express.json());
@@ -41,7 +44,10 @@ mongoose.connect(MONGODB_URI)
     });
 
 // WebSocket service'ini başlat
-const socketService = new SocketService(server);
+const socketService = new SocketService(io);
+
+// Initialize the queue service
+queueService.processQueue();
 
 /// Swagger UI
 swaggerSetup(app);

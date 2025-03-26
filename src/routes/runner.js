@@ -112,6 +112,83 @@ router.get('/queue', runnerController.getQueue);
 
 /**
  * @swagger
+ * /api/runners/{id}/profile:
+ *   get:
+ *     summary: Kurye profil bilgisini getir
+ *     tags: [Runners]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Kurye ID
+ *     responses:
+ *       200:
+ *         description: Kurye profil bilgisi başarıyla getirildi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Runner'
+ *       404:
+ *         description: Kurye bulunamadı
+ */
+router.get('/:id/profile', runnerController.getRunnerProfile);
+
+/**
+ * @swagger
+ * /api/runners/{id}/update:
+ *   post:
+ *     summary: Kurye profilini güncelle
+ *     tags: [Runners]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Kurye ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Runner'
+ *     responses:
+ *       200:
+ *         description: Kurye profili başarıyla güncellendi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Runner'
+ *       404:
+ *         description: Kurye bulunamadı
+ */
+router.post('/:id/update', runnerController.updateRunnerProfile);
+
+/**
+ * @swagger
+ * /api/runners/{id}/delete:
+ *   post:
+ *     summary: Kurye profilini sil
+ *     tags: [Runners]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Kurye ID
+ *     responses:
+ *       200:
+ *         description: Kurye profili başarıyla silindi
+ *       404:
+ *         description: Kurye bulunamadı
+ */
+router.post('/:id/delete', runnerController.deleteRunner);
+
+/**
+ * @swagger
  * components:
  *   schemas:
  *     Runner:
@@ -138,5 +215,6 @@ router.get('/queue', runnerController.getQueue);
  *         queuePosition:
  *           type: number
  */
+
 
 module.exports = router;

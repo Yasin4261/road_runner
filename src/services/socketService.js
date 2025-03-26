@@ -1,82 +1,38 @@
-const WebSocket = require('ws');
 const Runner = require('../models/Runner');
 
 class SocketService {
-    constructor(server) {
-        this.wss = new WebSocket.Server({ server });
-        this.setupWebSocket();
-    }
+    constructor(io) {
+        this.io = io;
+        this.runners = new Map(); // Kurye bağlantılarını saklamak için bir harita
 
-    setupWebSocket() {
-        this.wss.on('connection', (ws) => {
-            console.log('Yeni WebSocket bağlantısı');
+        io.on('connection', (socket) => {
+            console.log('Yeni bağlantı:', socket.id);
 
-            ws.on('message', async (message) => {
-                try {
-                    const data = JSON.parse(message);
-                    
-                    if (data.type === 'location_update') {
-                        await this.handleLocationUpdate(data);
+            socket.on('registerRunner', (runnerId) => {
+                this.runners.set(runnerId, socket.id);
+                console.log(`Kurye ${runnerId} kayıt oldu: ${socket.id}`);
+            });
+
+            socket.on('disconnect', () => {
+                for (let [runnerId, socketId] of this.runners.entries()) {
+                    if (socketId === socket.id) {
+                        this.runners.delete(runnerId);
+                        console.log(`Kurye ${runnerId} bağlantısı kesildi: ${socket.id}`);
+                        break;
                     }
-                } catch (error) {
-                    console.error('WebSocket hatası:', error);
                 }
             });
-
-            ws.on('close', () => {
-                console.log('WebSocket bağlantısı kapandı');
-            });
-
-            ws.on('error', (error) => {
-                console.error('WebSocket hatası:', error);
-            });
         });
     }
 
-    async handleLocationUpdate(data) {
-        const { runnerId, coordinates } = data;
-        
-        try {
-            // Kurye konumunu güncelle
-            await Runner.findByIdAndUpdate(runnerId, {
-                'currentLocation.coordinates': coordinates,
-                lastLocationUpdate: new Date()
-            });
-
-            // Tüm bağlı clientlara konum güncellemesini gönder
-            this.broadcast(JSON.stringify({
-                type: 'runner_location',
-                runnerId,
-                coordinates,
-                timestamp: new Date()
-            }));
-        } catch (error) {
-            console.error('Konum güncelleme hatası:', error);
+    notifyRunner(runnerId, message) {
+        const socketId = this.runners.get(runnerId);
+        if (socketId) {
+            this.io.to(socketId).emit('notification', message);
+            console.log(`Kurye ${runnerId} bildirimi gönderildi:`, message);
+        } else {
+            console.log(`Kurye ${runnerId} bağlantısı bulunamadı`);
         }
-    }
-
-    broadcast(message) {
-        this.wss.clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(message);
-            }
-        });
-    }
-
-    sendToRunner(runnerId, message) {
-        this.broadcast(JSON.stringify({
-            type: 'runner_notification',
-            runnerId,
-            message
-        }));
-    }
-
-    sendToCustomer(orderId, message) {
-        this.broadcast(JSON.stringify({
-            type: 'customer_notification',
-            orderId,
-            message
-        }));
     }
 }
 

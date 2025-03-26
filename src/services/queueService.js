@@ -1,16 +1,46 @@
 const Runner = require('../models/Runner');
+const notificationService = require('./notificationService');
 
 class QueueService {
+    constructor() {
+        this.queue = [];
+        this.processing = false;
+    }
+
+    enqueue(notification) {
+        this.queue.push(notification);
+        this.processQueue();
+    }
+
+    async processQueue() {
+        if (this.processing) return;
+        this.processing = true;
+
+        while (this.queue.length > 0) {
+            const notification = this.queue.shift();
+            await this.sendNotification(notification);
+        }
+
+        this.processing = false;
+    }
+
+    async sendNotification(notification) {
+        const nextRunner = await this.getNextRunner();
+        if (nextRunner) {
+            notification.runnerId = nextRunner._id;
+            await notificationService.send(notification);
+            await this.removeRunnerFromQueue(nextRunner._id);
+        }
+    }
+
     async addRunnerToQueue(runnerId) {
         const runner = await Runner.findById(runnerId);
         if (!runner) throw new Error('Runner not found');
 
-        // Zaten kuyrukta mı kontrol et
         if (runner.queuePosition !== null && runner.currentStatus === 'available') {
             throw new Error('Runner is already in queue');
         }
 
-        // Kuyruğun sonuna ekle
         const lastInQueue = await Runner.findOne({
             queuePosition: { $ne: null }
         }).sort({ queuePosition: -1 });
@@ -29,7 +59,6 @@ class QueueService {
         const runner = await Runner.findById(runnerId);
         if (!runner) throw new Error('Runner not found');
 
-        // Kuyrukta değilse hata verme, sessizce çık
         if (runner.queuePosition === null) {
             return runner;
         }
@@ -41,7 +70,6 @@ class QueueService {
         
         await Promise.all([
             runner.save(),
-            // Diğer kuryelerin pozisyonlarını güncelle
             Runner.updateMany(
                 { queuePosition: { $gt: oldPosition } },
                 { $inc: { queuePosition: -1 } }
@@ -49,6 +77,13 @@ class QueueService {
         ]);
 
         return runner;
+    }
+
+    async getNextRunner() {
+        return await Runner.findOne({
+            currentStatus: 'available',
+            queuePosition: { $ne: null }
+        }).sort({ queuePosition: 1 });
     }
 
     async getQueue() {
@@ -63,7 +98,6 @@ class QueueService {
             queuePosition: { $ne: null }
         }).sort({ queuePosition: 1 });
 
-        // Pozisyonları sırayla güncelle
         for (let i = 0; i < runners.length; i++) {
             runners[i].queuePosition = i + 1;
             await runners[i].save();

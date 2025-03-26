@@ -1,74 +1,71 @@
+const queueService = require('./queueService');
+
 class NotificationService {
-    async notifyNewOrder(order) {
-        try {
-            // Burada gerçek bildirim mantığı olacak (Socket.io, Push notification vs.)
-            console.log('Yeni sipariş bildirimi:', {
-                orderId: order._id,
-                runnerId: order.runner,
-                status: order.status
-            });
-            return true;
-        } catch (error) {
-            console.error('Bildirim gönderme hatası:', error);
-            return false;
+    constructor(socketService) {
+        this.socketService = socketService;
+    }
+
+    async send(notification) {
+        const runner = await Runner.findById(notification.runnerId);
+        if (runner) {
+            this.socketService.notifyRunner(runner, notification);
         }
     }
 
-    async notifyOrderPickedUp(order) {
-        try {
-            console.log('Sipariş alındı bildirimi:', {
-                orderId: order._id,
-                runnerId: order.runner,
-                status: 'pickedUp'
-            });
-            return true;
-        } catch (error) {
-            console.error('Bildirim gönderme hatası:', error);
-            return false;
-        }
+    notifyNewOrder(order) {
+        const message = {
+            type: 'newOrder',
+            title: 'Yeni Sipariş',
+            body: `Sipariş ID: ${order._id}`,
+            orderId: order._id,
+            customerName: order.customer.name,
+            customerAddress: order.customer.address,
+            orderDetails: order.orderDetails,
+            price: order.price
+        };
+        queueService.enqueue(message);
     }
 
-    async notifyOrderDelivered(order) {
-        try {
-            console.log('Sipariş teslim edildi bildirimi:', {
-                orderId: order._id,
-                runnerId: order.runner,
-                status: 'delivered'
-            });
-            return true;
-        } catch (error) {
-            console.error('Bildirim gönderme hatası:', error);
-            return false;
-        }
+    notifyOrderPickedUp(order) {
+        const message = {
+            type: 'orderPickedUp',
+            title: 'Sipariş Alındı',
+            body: `Sipariş ID: ${order._id}`,
+            orderId: order._id
+        };
+        queueService.enqueue(message);
     }
 
-    async notifyRunnerLocation(runnerId, location) {
-        try {
-            console.log('Kurye konum bildirimi:', {
-                runnerId,
-                location
-            });
-            return true;
-        } catch (error) {
-            console.error('Bildirim gönderme hatası:', error);
-            return false;
-        }
+    notifyOrderDelivered(order) {
+        const message = {
+            type: 'orderDelivered',
+            title: 'Sipariş Teslim Edildi',
+            body: `Sipariş ID: ${order._id}`,
+            orderId: order._id
+        };
+        queueService.enqueue(message);
     }
 
-    async notifyOrderStatusUpdate(order) {
-        try {
-            console.log('Sipariş durumu güncelleme bildirimi:', {
-                orderId: order._id,
-                runnerId: order.runner,
-                status: order.status,
-                statusHistory: order.statusHistory[order.statusHistory.length - 1],
-                updatedAt: new Date()
-            });
-            return true;
-        } catch (error) {
-            console.error('Bildirim gönderme hatası:', error);
-            return false;
-        }
+    notifyRunnerLocation(runnerId, location) {
+        const message = {
+            type: 'runnerLocationUpdate',
+            title: 'Kurye Konum Güncellemesi',
+            body: `Kurye ID: ${runnerId}`,
+            runnerId: runnerId,
+            location: location
+        };
+        queueService.enqueue(message);
+    }
+
+    notifyOrderStatusUpdate(order) {
+        const message = {
+            type: 'orderStatusUpdate',
+            title: 'Sipariş Durumu Güncellemesi',
+            body: `Sipariş ID: ${order._id}, Durum: ${order.status}`,
+            orderId: order._id,
+            status: order.status
+        };
+        queueService.enqueue(message);
     }
 }
 

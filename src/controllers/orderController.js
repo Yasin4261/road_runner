@@ -1,6 +1,5 @@
 const Order = require('../models/Order');
 const Runner = require('../models/Runner');
-const matchingService = require('../services/matchingService');
 const notificationService = require('../services/notificationService');
 
 class OrderController {
@@ -59,7 +58,7 @@ class OrderController {
                 await order.populate('runner', 'name phone currentLocation');
 
                 // Bildirim gönder
-                await notificationService.notifyNewOrder(order);
+                notificationService.notifyNewOrder(order);
 
                 console.log('Sipariş başarıyla atandı');
                 res.status(201).json({
@@ -146,7 +145,7 @@ class OrderController {
             await order.save();
 
             // Bildirim gönder
-            await notificationService.notifyOrderStatusUpdate(order);
+            notificationService.notifyOrderStatusUpdate(order);
 
             res.json(order);
         } catch (error) {
@@ -155,4 +154,4 @@ class OrderController {
     }
 }
 
-module.exports = new OrderController(); 
+module.exports = new OrderController();

@@ -115,6 +115,51 @@ class RunnerController {
             res.status(400).json({ message: error.message });
         }
     }
+
+    // Kurye profil bilgisini getir
+    async getRunnerProfile(req, res) {
+        try {
+            const runner = await Runner.findById(req.params.id);
+            if (!runner) {
+                return res.status(404).json({ message: 'Kurye bulunamadı' });
+            }
+            res.json(runner);
+        } catch (error) {
+            res.status(400).json({ message: error.message });
+        }
+    }
+
+    // Kurye profilini güncelle
+    async updateRunnerProfile(req, res) {
+        try {
+            const runner = await Runner.findById(req.params.id);
+            if (!runner) {
+                return res.status(404).json({ message: 'Kurye bulunamadı' });
+            }
+
+            Object.assign(runner, req.body);
+            await runner.save();
+            res.json(runner);
+        }
+        catch (error) {
+            res.status(400).json({ message: error.message });
+        }
+    }
+
+    // Kurye sil
+    async deleteRunner(req, res) {
+        try {
+            const runner = await Runner.findById(req.params.id);
+            if (!runner) {
+                return res.status(404).json({ message: 'Kurye bulunamadı' });
+            }
+
+            await runner.remove();
+            res.json({ message: 'Kurye silindi' });
+        } catch (error) {
+            res.status(400).json({ message: error.message });
+        }
+    }
 }
 
 module.exports = new RunnerController(); 
